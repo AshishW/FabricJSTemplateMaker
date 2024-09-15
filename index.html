@@ -88,9 +88,9 @@
             border-radius: 5px;
             resize: vertical;
         }
-        /* .container{
+        .container{
             transform: scale(0.7);
-        } */
+        }
         /* Toolbar styling */
         #toolbar {
             background-color: #f2f2f2;
@@ -149,8 +149,8 @@
                 <th>Object</th>
                 <th>Left (%)</th>
                 <th>Left (px)</th>
-                <th>Top (%)</th>
-                <th>Top (px)</th>
+                <th>Bottom (%)</th>
+                <th>Bottom (px)</th>
             </tr>
         </thead>
         <tbody>
@@ -262,9 +262,9 @@
 
             canvas.getObjects().forEach((obj, index) => {
                 const leftPercent = ((obj.left / canvas.width) * 100).toFixed(2);
-                const topPercent = ((obj.top / canvas.height) * 100).toFixed(2);
+                const bottomPercent = (100 - ((obj.top + obj.height * obj.scaleY) / canvas.height) * 100).toFixed(2);
                 const leftPx = obj.left.toFixed(2);
-                const topPx = obj.top.toFixed(2);
+                const bottomPx = (canvas.height - (obj.top + obj.height * obj.scaleY)).toFixed(2);
 
                 const row = document.createElement('tr');
 
@@ -280,13 +280,13 @@
                 leftPxCell.textContent = `${leftPx}px`;
                 row.appendChild(leftPxCell);
 
-                const topPercentCell = document.createElement('td');
-                topPercentCell.textContent = `${topPercent}%`;
-                row.appendChild(topPercentCell);
+                const bottomPercentCell = document.createElement('td');
+                bottomPercentCell.textContent = `${bottomPercent}%`;
+                row.appendChild(bottomPercentCell);
 
-                const topPxCell = document.createElement('td');
-                topPxCell.textContent = `${topPx}px`;
-                row.appendChild(topPxCell);
+                const bottomPxCell = document.createElement('td');
+                bottomPxCell.textContent = `${bottomPx}px`;
+                row.appendChild(bottomPxCell);
 
                 tableBody.appendChild(row);
             });
@@ -305,7 +305,10 @@
 
         // Function to update the JSON template display in the modal
         function updateJsonTemplate() {
+            const num_images = canvas.getObjects().filter(obj => obj.type === 'image').length-1;
             const jsonTemplate = {
+                resolution: `${canvas.width}x${canvas.height}`,
+                num_images: num_images,
                 objects: [],
                 //uncomment if you want to show width and height in the JSON template
                 // width: canvas.width,
@@ -314,17 +317,16 @@
 
             canvas.getObjects().forEach(obj => { //shows values in %
                 const leftPercent = ((obj.left / canvas.width) * 100).toFixed(2);
-                const topPercent = ((obj.top / canvas.height) * 100).toFixed(2);
-                // const bottomPercent = ((obj.bottom / canvas.height) * 100).toFixed(2);
+                const bottomPercent = (100 - ((obj.top + obj.height * obj.scaleY) / canvas.height) * 100).toFixed(2);
                 const widthPercent = ((obj.width * obj.scaleX / canvas.width) * 100).toFixed(2); // Calculate scaled width in %
                 const heightPercent = ((obj.height * obj.scaleY / canvas.height) * 100).toFixed(2); // Calculate scaled height in %
 
                 const newObj = {
                     type: obj.type,
                     left: `${leftPercent}%`,  // Store percentage instead of pixels
-                    top: `${topPercent}%`,    // Store percentage instead of pixels
-                    width: `${widthPercent}%`,  // Store scaled width in %
-                    height: `${heightPercent}%`  // Store scaled height in % 
+                    bottom: `${bottomPercent}%`,  // Store percentage instead of pixels
+                    width: `50%`,  // Store scaled width in %
+                    height: `50%`  // Store scaled height in % 
                 };
 
                 if (obj.type === 'image') {
@@ -333,13 +335,12 @@
 
                 } else if (obj.type === 'text') {
                     newObj.fontSize = obj.fontSize;
-                    newObj.fill = "s";  // Provide default fill color
+                    newObj.fill = "";  // Provide default fill color
                     newObj.fontWeight = obj.fontWeight || '';
                     newObj.fontStyle = obj.fontStyle || '';
                     newObj.textAlign = obj.textAlign || 'left';
                     newObj.text =  "";  // Provide default text
                 }
-
                 jsonTemplate.objects.push(newObj);
             });
 
