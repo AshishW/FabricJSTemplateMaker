@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fabric.js Banner Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.4/fabric.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Oswald:wght@400;700&family=Playfair+Display:wght@400;700&family=Poppins:wght@400;700&family=Raleway:wght@400;700&family=Source+Sans+Pro:wght@400;700&family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+        #bannerCanvas {
+            border: 1px solid #000;
+            width: 100%; /* Make canvas responsive */
+            /* max-width: 1200px; Limit maximum width */
+            height: auto; /* Maintain aspect ratio */
+        }
+        #positionsTable {
+            margin-top: 20px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        #positionsTable th, #positionsTable td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        #positionsTable th {
+            background-color: #f2f2f2;
+        }
+        /* Button styling */
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        /* Modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 700px;
+            border-radius: 10px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        /* Text area */
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: vertical;
+        }
+        /* .container{
+            transform: scale(0.7);
+        } */
+        /* Toolbar styling */
+        #toolbar {
+            background-color: #f2f2f2;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        #toolbar select, #toolbar input, #toolbar button {
+            padding: 5px;
+            font-size: 14px;
+        }
+        
+        #toolbar button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        
+        #toolbar button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <select id="fontFamily">
+            <option value="Roboto">Roboto</option>
+            <option value="Open Sans">Open Sans</option>
+            <option value="Lato">Lato</option>
+            <option value="Montserrat">Montserrat</option>
+            <option value="Oswald">Oswald</option>
+            <option value="Playfair Display">Playfair Display</option>
+            <option value="Poppins">Poppins</option>
+            <option value="Raleway">Raleway</option>
+            <option value="Source Sans Pro">Source Sans Pro</option>
+            <option value="Ubuntu">Ubuntu</option>
+        </select>
+        <input type="color" id="textColor" value="#000000">
+        <button id="bringToFront">Bring to Front</button>
+        <button id="boldText">Bold</button>
+        <button id="italicText">Italic</button>
+        <input type="number" id="letterSpacing" placeholder="Letter Spacing" min="0" max="1000" step="10">
+        <input type="number" id="lineHeight" placeholder="Line Height" min="0" max="10" step="0.1">
+    </div>
+    <div class="container">
+        <canvas id="bannerCanvas"></canvas>
+    </div>
+    <table id="positionsTable">
+        <thead>
+            <tr>
+                <th>Object</th>
+                <th>Left (%)</th>
+                <th>Left (px)</th>
+                <th>Top (%)</th>
+                <th>Top (px)</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <button id="jsonButton"></> View/Copy JSON</button>
+    <button id="importButton">Import JSON</button>
+    <!-- <button id="roundButton">Round Values</button>  -->
+    <!-- The Modal for JSON View/Copy -->
+    <div id="jsonModal" class="modal">
+        <div class="modal-content">
+            <span class="close">×</span>
+            <pre id="jsonTemplate"></pre>
+            <button id="copyButton">Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <!-- The Modal for JSON Import -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <span class="closeImport">×</span>
+            <h2>Import JSON</h2>
+            <textarea id="importJsonArea" placeholder="Paste your JSON here..."></textarea>
+            <input type="text" id="resolution" placeholder="e.g. 1360x800">
+            <button id="importConfirmButton">Import</button>
+        </div>
+    </div>
+
+    <script>
+        // JSON template for the banner
+        const template = {
+            "objects": [
+                {
+                    "type": "text",
+                    "left": 721,
+                    "top": 151,
+                    "width": 271.9453125,
+                    "height": 54.23999999999999,
+                    "fontSize": 36,
+                    "fill": "blue",
+                    "fontWeight": "bold",
+                    "fontStyle": "",
+                    "textAlign": "left",
+                    "text": "Flat 15% Off"
+                },
+                {
+                    "type": "text",
+                    "left": 734,
+                    "top": 295,
+                    "width": 254.21875,
+                    "height": 36.16,
+                    "fontSize": 22,
+                    "fill": "violet",
+                    "fontWeight": "",
+                    "fontStyle": "italic",
+                    "textAlign": "left",
+                    "text": "Limited Time Offer!"
+                },
+                {
+                    "type": "image",
+                    "left": 94,
+                    "top": 128,
+                    "width": 480,
+                    "height": 240,
+                    "src": "https://via.placeholder.com/480x240?text=Product+Image"
+                },
+                {
+                    "type": "image",
+                    "left": 94,
+                    "top": 400,
+                    "width": 480,
+                    "height": 240,
+                    "src": "https://via.placeholder.com/480x240?text=Product+Image"
+                },
+                {
+                    "type": "image",
+                    "left": 94,
+                    "top": 672,
+                    "width": 480,
+                    "height": 240,
+                    "src": "https://via.placeholder.com/480x240?text=Product+Image"
+                }
+            ],
+            "width": 1360,
+            "height": 800
+        };
+
+        // Initialize the canvas
+        const canvas = new fabric.Canvas('bannerCanvas');
+        canvas.setWidth(template.width);
+        canvas.setHeight(template.height);
+
+        // Add background (For simplicity, we use a solid color here. You can customize as needed)
+        canvas.setBackgroundColor('#f0f0f0', canvas.renderAll.bind(canvas));
+
+        // Function to load image and add it to the canvas
+        function loadImage(src, left, top, width, height) {
+            fabric.Image.fromURL(src, function(img) {
+                img.set({ left, top, width, height });
+                canvas.add(img);
+                canvas.renderAll();
+            });
+        }
+
+        // Function to update the positions of the objects on the canvas
+        function updatePositions() {
+            const tableBody = document.querySelector('#positionsTable tbody');
+            tableBody.innerHTML = ''; // Clear previous content
+
+            canvas.getObjects().forEach((obj, index) => {
+                const leftPercent = ((obj.left / canvas.width) * 100).toFixed(2);
+                const topPercent = ((obj.top / canvas.height) * 100).toFixed(2);
+                const leftPx = obj.left.toFixed(2);
+                const topPx = obj.top.toFixed(2);
+
+                const row = document.createElement('tr');
+
+                const objCell = document.createElement('td');
+                objCell.textContent = `Object ${index + 1}`;
+                row.appendChild(objCell);
+
+                const leftPercentCell = document.createElement('td');
+                leftPercentCell.textContent = `${leftPercent}%`;
+                row.appendChild(leftPercentCell);
+
+                const leftPxCell = document.createElement('td');
+                leftPxCell.textContent = `${leftPx}px`;
+                row.appendChild(leftPxCell);
+
+                const topPercentCell = document.createElement('td');
+                topPercentCell.textContent = `${topPercent}%`;
+                row.appendChild(topPercentCell);
+
+                const topPxCell = document.createElement('td');
+                topPxCell.textContent = `${topPx}px`;
+                row.appendChild(topPxCell);
+
+                tableBody.appendChild(row);
+            });
+
+            updateJsonTemplate();
+        }
+
+        function formatJSON(json) {
+            return JSON.stringify(json, (key, value) => {
+                if (Array.isArray(value)) {
+                    return value.map(item => JSON.stringify(item));
+                }
+                return value;
+            }, 4).replace(/\\/g, '').replace(/"\{/g, '{').replace(/\}"/g, '}').replace(/"\[/g, '[').replace(/\]"/g, ']');
+        }
+
+        // Function to update the JSON template display in the modal
+        function updateJsonTemplate() {
+            const jsonTemplate = {
+                objects: [],
+                //uncomment if you want to show width and height in the JSON template
+                // width: canvas.width,
+                // height: canvas.height
+            };
+
+            canvas.getObjects().forEach(obj => { //shows values in %
+                const leftPercent = ((obj.left / canvas.width) * 100).toFixed(2);
+                const topPercent = ((obj.top / canvas.height) * 100).toFixed(2);
+                // const bottomPercent = ((obj.bottom / canvas.height) * 100).toFixed(2);
+                const widthPercent = ((obj.width * obj.scaleX / canvas.width) * 100).toFixed(2); // Calculate scaled width in %
+                const heightPercent = ((obj.height * obj.scaleY / canvas.height) * 100).toFixed(2); // Calculate scaled height in %
+
+                const newObj = {
+                    type: obj.type,
+                    left: `${leftPercent}%`,  // Store percentage instead of pixels
+                    top: `${topPercent}%`,    // Store percentage instead of pixels
+                    width: `${widthPercent}%`,  // Store scaled width in %
+                    height: `${heightPercent}%`  // Store scaled height in % 
+                };
+
+                if (obj.type === 'image') {
+                    // newObj.src = obj.getSrc() || "https://via.placeholder.com/480x240?text=Default+Image";  // Provide default image URL
+                    newObj.src = "";  // Provide default image URL
+
+                } else if (obj.type === 'text') {
+                    newObj.fontSize = obj.fontSize;
+                    newObj.fill = "s";  // Provide default fill color
+                    newObj.fontWeight = obj.fontWeight || '';
+                    newObj.fontStyle = obj.fontStyle || '';
+                    newObj.textAlign = obj.textAlign || 'left';
+                    newObj.text =  "";  // Provide default text
+                }
+
+                jsonTemplate.objects.push(newObj);
+            });
+
+            // document.getElementById('jsonTemplate').textContent = JSON.stringify(jsonTemplate, null, 4);
+            document.getElementById('jsonTemplate').textContent = formatJSON(jsonTemplate); //for experimental formatting
+        }
+
+        // Add objects to canvas
+        template.objects.forEach(obj => {
+            if (obj.type === 'image') {
+                loadImage(obj.src, obj.left, obj.top, obj.width, obj.height);
+            } else if (obj.type === 'text') {
+                const text = new fabric.Text(obj.text, {
+                    left: obj.left,
+                    top: obj.top,
+                    fontSize: obj.fontSize,
+                    fill: obj.fill,
+                    fontWeight: obj.fontWeight || '', // Default to empty string if not defined
+                    fontStyle: obj.fontStyle || '', // Default to empty string if not defined
+                    textAlign: obj.textAlign || 'left', // Default to 'left' if not defined
+                    originX: 'left', // Ensure proper positioning
+                    originY: 'top' // Ensure proper positioning
+                });
+                canvas.add(text);
+            }
+        });
+
+        // Update positions and JSON template whenever objects are moved or scaled
+        canvas.on('object:modified', updatePositions);
+        canvas.on('object:moving', updatePositions);
+        canvas.on('object:scaling', updatePositions);
+        canvas.on('object:rotating', updatePositions);
+
+        // Initial update of positions and JSON template
+        canvas.renderAll();
+        updatePositions();
+
+        // Modal functionality for JSON View/Copy
+        const jsonModal = document.getElementById("jsonModal");
+        const jsonButton = document.getElementById("jsonButton");
+        const span = document.getElementsByClassName("close")[0];
+
+        // When the user clicks the button, open the modal
+        jsonButton.onclick = function() {
+            jsonModal.style.display = "block";
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        span.onclick = function() {
+            jsonModal.style.display = "none";
+        }
+
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target === jsonModal) {
+                jsonModal.style.display = "none";
+            }
+        }
+
+        // Copy JSON template to clipboard
+        document.getElementById('copyButton').addEventListener('click', function() {
+            const jsonTemplateText = document.getElementById('jsonTemplate').textContent;
+            navigator.clipboard.writeText(jsonTemplateText).then(() => {
+                alert('JSON template copied to clipboard!');
+            }).catch(err => {
+                alert('Failed to copy JSON template: ', err);
+            });
+        });
+
+        // Modal functionality for JSON Import
+        const importModal = document.getElementById("importModal");
+        const importButton = document.getElementById("importButton");
+        const closeImport = document.getElementsByClassName("closeImport")[0];
+        const importConfirmButton = document.getElementById("importConfirmButton");
+        const importJsonArea = document.getElementById("importJsonArea");
+        const resolutionInput = document.getElementById("resolution");
+
+        // When the user clicks the import button, open the modal
+        importButton.onclick = function() {
+            importModal.style.display = "block";
+        }
+
+        // When the user clicks on <span> (x), close the modal
+        closeImport.onclick = function() {
+            importModal.style.display = "none";
+        }
+
+        // When the user clicks anywhere outside of the modal, close it
+        window.onclick = function(event) {
+            if (event.target === importModal) {
+                importModal.style.display = "none";
+            }
+        }
+
+        // // Handle JSON import
+        // importConfirmButton.onclick = function() {
+        //     try {
+        //         const importedJson = JSON.parse(importJsonArea.value);
+        //         const resolution = resolutionInput.value.split('x');
+        //         const width = parseInt(resolution[0]);
+        //         const height = parseInt(resolution[1]);
+        //         canvas.clear(); // Clear existing objects
+        //         canvas.setWidth(width);
+        //         canvas.setHeight(height);
+        //         canvas.setBackgroundColor('#f0f0f0', canvas.renderAll.bind(canvas));
+
+        //         // Add objects from imported JSON
+        //         importedJson.objects.forEach(obj => {
+        //             if (obj.type === 'image') {
+        //                 const imgSrc = "https://via.placeholder.com/480x240?text=Default+Image";
+        //                 // Convert width and height from % string to px number
+        //                 const widthPx = parseFloat(obj.width.replace('%', '')) * canvas.width / 100;
+        //                 const heightPx = parseFloat(obj.height.replace('%', '')) * canvas.height / 100;
+
+        //                 loadImage(imgSrc,
+        //                            parseFloat(obj.left.replace('%', '')) * canvas.width / 100,
+        //                            parseFloat(obj.top.replace('%', '')) * canvas.height / 100,
+        //                            widthPx, // Pass the calculated width in pixels
+        //                            heightPx); // Pass the calculated height in pixels
+        //             } else if (obj.type === 'text') {
+        //                 const text = new fabric.Text(obj.text || "Sample Text", {
+        //                     left: parseFloat(obj.left.replace('%', '')) * canvas.width / 100,  // Convert % to px
+        //                     top: parseFloat(obj.top.replace('%', '')) * canvas.height / 100,  // Convert % to px
+        //                     fontSize: obj.fontSize,
+        //                     fill: obj.fill || "black",
+        //                     fontWeight: obj.fontWeight || '',
+        //                     fontStyle: obj.fontStyle || '',
+        //                     textAlign: obj.textAlign || 'left',
+        //                     originX: 'left',
+        //                     originY: 'top'
+        //                 });
+        //                 canvas.add(text);
+        //             }
+        //         });
+
+        //         canvas.renderAll();
+        //         updatePositions();
+        //         importModal.style.display = "none"; 
+        //     } catch (error) {
+        //         alert("Invalid JSON format!");
+        //     }
+        // };
+
+        importConfirmButton.onclick = function() {
+            // render canvas by loading from JSON
+            canvas.clear();
+            canvas.loadFromJSON(importJsonArea.value, function() {
+                canvas.renderAll();
+                updatePositions();
+                updateJsonTemplate();
+                importModal.style.display = "none";
+                // if image width and height are same as resolution then make that particular image unselectable
+                const objects = canvas.getObjects();
+                objects.forEach(obj => {
+                    if (obj.type === 'image' && obj.width === canvas.width && obj.height === canvas.height) {
+                        obj.selectable = false;
+                    }
+                });
+            });
+        }
+        // Function to round off values in the table and JSON
+        function roundValues() {
+            canvas.getObjects().forEach(obj => {
+                obj.left = Math.round(obj.left);
+                obj.top = Math.round(obj.top);
+
+                // Only round width and height for image objects (they are in pixels)
+                if (obj.type === 'image') {
+                    obj.width = Math.round(obj.width * obj.scaleX);
+                    obj.height = Math.round(obj.height * obj.scaleY);
+                    obj.scaleX = 1;
+                    obj.scaleY = 1;
+                }
+            });
+
+            updatePositions(); // Update table with rounded values
+            updateJsonTemplate(); // Update JSON modal with rounded values
+            canvas.renderAll(); // Render the canvas with rounded object positions
+        }
+        // Event listener for the Round Values button
+        // document.getElementById('roundButton').addEventListener('click', roundValues);
+
+        // Toolbar functionality
+        const fontFamilySelect = document.getElementById('fontFamily');
+        const textColorInput = document.getElementById('textColor');
+        const bringToFrontButton = document.getElementById('bringToFront');
+        const boldTextButton = document.getElementById('boldText');
+        const italicTextButton = document.getElementById('italicText');
+        const letterSpacingInput = document.getElementById('letterSpacing');
+        const lineHeightInput = document.getElementById('lineHeight');
+
+        fontFamilySelect.onchange = function() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'text') {
+                activeObject.set('fontFamily', this.value);
+                canvas.renderAll();
+            }
+        };
+
+        textColorInput.onchange = function() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'text') {
+                activeObject.set('fill', this.value);
+                canvas.renderAll();
+            }
+        };
+
+        bringToFrontButton.onclick = function() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject) {
+                canvas.bringToFront(activeObject);
+            }
+        };
+
+        boldTextButton.onclick = function() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'text') {
+                activeObject.set('fontWeight', activeObject.fontWeight === 'bold' ? 'normal' : 'bold');
+                canvas.renderAll();
+            }
+        };
+
+        italicTextButton.onclick = function() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'text') {
+                activeObject.set('fontStyle', activeObject.fontStyle === 'italic' ? 'normal' : 'italic');
+                canvas.renderAll();
+            }
+        };
+
+        letterSpacingInput.onchange = function() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'text') {
+                activeObject.set('charSpacing', parseInt(this.value));
+                canvas.renderAll();
+            }
+        };
+
+        lineHeightInput.onchange = function() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'text') {
+                activeObject.set('lineHeight', parseFloat(this.value));
+                canvas.renderAll();
+            }
+        };
+
+        // Update toolbar when a new object is selected
+        canvas.on('selection:created', updateToolbar);
+        canvas.on('selection:updated', updateToolbar);
+
+        function updateToolbar() {
+            const activeObject = canvas.getActiveObject();
+            if (activeObject && activeObject.type === 'text') {
+                fontFamilySelect.value = activeObject.fontFamily;
+                textColorInput.value = activeObject.fill;
+                letterSpacingInput.value = activeObject.charSpacing || 0;
+                lineHeightInput.value = activeObject.lineHeight || 1;
+            }
+        }
+    </script>
+</body>
+</html>
