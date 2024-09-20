@@ -322,24 +322,26 @@
                 const heightPercent = ((obj.height * obj.scaleY / canvas.height) * 100).toFixed(2); // Calculate scaled height in %
 
                 const newObj = {
-                    type: obj.type,
+                    type: obj.type==="textbox" ? "text" : obj.type,
                     left: `${leftPercent}%`,  // Store percentage instead of pixels
                     bottom: `${bottomPercent}%`,  // Store percentage instead of pixels
-                    width: `50%`,  // Store scaled width in %
-                    height: `50%`  // Store scaled height in % 
+                    width: `${widthPercent}%`,  // Store scaled width in %
+                    height:  `${heightPercent}%`, // Store scaled height in % 
                 };
 
                 if (obj.type === 'image') {
                     // newObj.src = obj.getSrc() || "https://via.placeholder.com/480x240?text=Default+Image";  // Provide default image URL
                     newObj.src = "";  // Provide default image URL
-
-                } else if (obj.type === 'text') {
+                    newObj["height"] = newObj["width"] = "50%"
+                } else if (obj.type === 'text' || obj.type==='textbox') {
                     newObj.fontSize = obj.fontSize;
                     newObj.fill = "";  // Provide default fill color
                     newObj.fontWeight = obj.fontWeight || '';
                     newObj.fontStyle = obj.fontStyle || '';
                     newObj.textAlign = obj.textAlign || 'left';
                     newObj.text =  "";  // Provide default text
+                    newObj.fontFamily = obj.fontFamily;
+                    newObj["height"] = "100%";
                 }
                 jsonTemplate.objects.push(newObj);
             });
