@@ -343,7 +343,9 @@
                     newObj.fontFamily = obj.fontFamily;
                     newObj["height"] = "100%";
                 }
-                jsonTemplate.objects.push(newObj);
+                if(newObj["left"] !== "0.00%" && newObj["bottom"] !== "0.00%"){ // to not push background image thing in the template
+                    jsonTemplate.objects.push(newObj);
+                }
             });
 
             // document.getElementById('jsonTemplate').textContent = JSON.stringify(jsonTemplate, null, 4);
